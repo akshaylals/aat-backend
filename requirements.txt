@@ -1,2 +1,2 @@
-fastapi==0.104.1
+fastapi[all]==0.104.1
 SQLAlchemy==2.0.23
