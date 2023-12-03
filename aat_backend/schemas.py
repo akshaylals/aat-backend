@@ -10,8 +10,8 @@ class File(BaseModel):
 
 
 class AnnotationBase(BaseModel):
-    title: str
-    description: str
+    note: str
+    coordinates: dict
     file_id: int
 
 

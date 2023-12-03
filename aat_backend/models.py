@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, JSON
 from sqlalchemy.orm import relationship
 
 from .database import Base
@@ -17,8 +17,8 @@ class Annotation(Base):
     __tablename__ = "annotations"
 
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, index=True)
-    description = Column(String, index=True)
+    note = Column(String, index=True)
+    coordinates = Column(JSON)
     file_id = Column(Integer, ForeignKey("files.id"))
 
     file = relationship("File", back_populates="annotations")
