@@ -22,3 +22,10 @@ class Annotation(Base):
     file_id = Column(Integer, ForeignKey("files.id"))
 
     file = relationship("File", back_populates="annotations")
+
+    def dict(self):
+        return {
+            'id': self.id,
+            'note': self.note,
+            'coordinates': self.coordinates,
+        }

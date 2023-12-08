@@ -1,6 +1,6 @@
 import os
-
-from fastapi import FastAPI, HTTPException, Depends, status
+import asyncio
+from fastapi import FastAPI, HTTPException, Depends, status, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
@@ -47,3 +47,15 @@ def get_file(file_id: int, db: Session = Depends(get_db)):
 def create_annotations(annotation: schemas.AnnotationCreate, db: Session = Depends(get_db)):
     annotation = crud.create_annotation(db, annotation=annotation)
     return annotation
+
+@app.websocket("/files/{file_id}/annotations")
+async def websocket_endpoint(websocket: WebSocket, file_id: int, db: Session = Depends(get_db)):
+    await websocket.accept()
+    try:
+        while True:
+            annotations_orm = crud.get_annotations(db, file_id=file_id)
+            annotations = [annotation.dict() for annotation in annotations_orm]
+            await websocket.send_json(annotations)
+            await asyncio.sleep(5)
+    except WebSocketDisconnect:
+        print("Websocket disconnected")
