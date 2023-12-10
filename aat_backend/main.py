@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from . import crud, models, schemas
-from .database import SessionLocal, engine
+from .database import engine, get_db
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -19,13 +19,6 @@ app.add_middleware(
     allow_methods=["*"],  # Allows all methods
     allow_headers=["*"],  # Allows all headers
 )
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 @app.get("/")
@@ -55,6 +48,14 @@ def get_file(file_id: int, db: Session = Depends(get_db)):
 def create_annotations(annotation: schemas.AnnotationCreate, db: Session = Depends(get_db)):
     annotation = crud.create_annotation(db, annotation=annotation)
     return annotation
+
+@app.delete("/annotations/{annotation_id}")
+def delete_annotations(annotation_id: int, db: Session = Depends(get_db)):
+    annotation = crud.delete_annotation(db, annotation_id)
+    if annotation:
+        return annotation
+    else:
+        raise HTTPException(status_code=404, detail="Annotation not found")
 
 @app.websocket("/files/{file_id}/annotations")
 async def websocket_endpoint(websocket: WebSocket, file_id: int, db: Session = Depends(get_db)):

@@ -18,3 +18,12 @@ def create_annotation(db: Session, annotation: schemas.AnnotationCreate):
     db.commit()
     db.refresh(db_annotation)
     return db_annotation
+
+def delete_annotation(db: Session, annotation_id: int):
+    db_annotation = db.query(models.Annotation).filter(models.Annotation.id == annotation_id).first()
+    if db_annotation:
+        db.delete(db_annotation)
+        db.commit()
+        return db_annotation
+    else:
+        return None
