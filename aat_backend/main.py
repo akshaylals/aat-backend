@@ -1,6 +1,6 @@
 import os
 import asyncio
-from fastapi import FastAPI, HTTPException, Depends, status, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Depends, status, WebSocket, WebSocketDisconnect, UploadFile, File
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -38,11 +38,27 @@ def get_file_annotations(file_id: int, db: Session = Depends(get_db)):
 @app.get("/files/{file_id}/data", response_model=list[schemas.Annotation])
 def get_file(file_id: int, db: Session = Depends(get_db)):
     file = crud.get_file(db, file_id=file_id)
-    file_path = os.path.join('data', file.path, 'scene.gltf')
+    file_path = os.path.join('data', file.path)
     if os.path.exists(file_path):
         return FileResponse(path=file_path, media_type='application/octet-stream', status_code=status.HTTP_200_OK)
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='File not found')
+
+@app.post("/files")
+def create_upload_file(file: UploadFile, db: Session = Depends(get_db)):
+    try:
+        contents = file.file.read()
+        path = os.path.join('data', file.filename)
+        with open(path, 'wb') as f:
+            f.write(contents)
+    except Exception:
+        return {"message": "There was an error uploading the file"}
+    finally:
+        file.file.close()
+    
+    file_sch = schemas.FileCreate(path=file.filename)
+    file_orm = crud.create_file(db, file_sch)
+    return file_orm
 
 @app.post("/annotations/", response_model=schemas.Annotation)
 def create_annotations(annotation: schemas.AnnotationCreate, db: Session = Depends(get_db)):

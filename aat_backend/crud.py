@@ -9,6 +9,13 @@ def get_files(db: Session):
 def get_file(db: Session, file_id):
     return db.query(models.File).filter(models.File.id == file_id).first()
 
+def create_file(db: Session, file: schemas.FileCreate):
+    db_file = models.File(**file.dict())
+    db.add(db_file)
+    db.commit()
+    db.refresh(db_file)
+    return db_file
+
 def get_annotations(db: Session, file_id):
     return db.query(models.Annotation).filter(models.Annotation.file_id == file_id).all()
 
