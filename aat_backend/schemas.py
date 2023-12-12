@@ -1,13 +1,16 @@
 from pydantic import BaseModel
 
+
 class FileBase(BaseModel):
     path: str
+
 
 class File(FileBase):
     id: int
 
     class Config:
         orm_mode = True
+
 
 class FileCreate(FileBase):
     pass
