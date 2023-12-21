@@ -16,5 +16,5 @@ $ pip install -r requirements.txt
 ## Run the backend
 
 ```bash
-$ uvicorn aat_backend.main:app --reload
+$ uvicorn aat_backend.main:app --host 0.0.0.0 --reload
 ```
