@@ -6,6 +6,19 @@
 $ python -m venv env
 $ ./env/scripts/activate
 ```
+or
+to create conda env
+```bash
+$ conda create --name aat_backend python=3.8
+$ conda activate aat_backend
+
+```
+
+to activate existing conda env
+```bash
+$ conda info --envs
+$ conda activate <env_name>
+```
 
 ## Install requirements
 
