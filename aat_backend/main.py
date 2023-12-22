@@ -73,14 +73,35 @@ def delete_annotations(annotation_id: int, db: Session = Depends(get_db)):
     else:
         raise HTTPException(status_code=404, detail="Annotation not found")
 
+connected_websockets = set()
+latest_message = None
 @app.websocket("/files/{file_id}/annotations")
 async def websocket_endpoint(websocket: WebSocket, file_id: int, db: Session = Depends(get_db)):
+    global latest_message
     await websocket.accept()
+    connected_websockets.add(websocket)
+    if latest_message:
+        try:
+            await websocket.send_json(latest_message)
+        except WebSocketDisconnect:
+            print("Websocket disconnected")
     try:
         while True:
+            message = await websocket.receive_text()
+            print(message)
             annotations_orm = crud.get_annotations(db, file_id=file_id)
             annotations = [annotation.dict() for annotation in annotations_orm]
-            await websocket.send_json(annotations)
-            await asyncio.sleep(5)
+            latest_message = annotations
+            for ws in connected_websockets:
+                try:
+                    print(ws)
+                    await ws.send_json(annotations)
+                except WebSocketDisconnect:
+                    print("Websocket disconnected")
+                    connected_websockets.remove(ws)
+            # await websocket.send_json(annotations)
+            # await asyncio.sleep(5)
     except WebSocketDisconnect:
         print("Websocket disconnected")
+    finally:
+        connected_websockets.remove(websocket)
