@@ -3,6 +3,10 @@ from sqlalchemy.orm import Session
 from . import models, schemas
 
 
+def get_user(db: Session, username: str):
+    db_user = db.query(models.User).filter(models.User.username == username).first()
+    return schemas.UserAuth(**db_user.dict())
+
 def get_files(db: Session):
     return db.query(models.File).all()
 

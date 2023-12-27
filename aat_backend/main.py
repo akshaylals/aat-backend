@@ -13,7 +13,6 @@ from passlib.context import CryptContext
 
 from . import crud, models, schemas
 from .database import engine, get_db
-from .schemas import User, UserInDB, TokenData, Token
 
 
 # to get a string like this run:
@@ -21,15 +20,6 @@ from .schemas import User, UserInDB, TokenData, Token
 SECRET_KEY="48d56adc96ef62fd6d10a01ce9da241929b554f4976eed59159fa2a091031b76"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
-fake_users_db = {
-    "johndoe": {
-        "username": "johndoe",
-        "full_name": "John Doe",
-        "email": "johndoe@example.com",
-        "hashed_password": "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW",
-    }
-}
 
 
 models.Base.metadata.create_all(bind=engine)
@@ -48,22 +38,11 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
-
-def get_password_hash(password):
-    return pwd_context.hash(password)
-
-def get_user(db, username: str):
-    if username in db:
-        user_dict = db[username]
-        return UserInDB(**user_dict)
-
-def authenticate_user(fake_db, username: str, password: str):
-    user = get_user(fake_db, username)
+def authenticate_user(db, username: str, password: str):
+    user = crud.get_user(db, username)
     if not user:
         return False
-    if not verify_password(password, user.hashed_password):
+    if not pwd_context.verify(password, user.hashed_password):
         return False
     return user
 
@@ -77,7 +56,10 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
+async def get_current_user(
+    token: Annotated[str, Depends(oauth2_scheme)],
+    db: Annotated[Session, Depends(get_db)]
+):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -88,20 +70,21 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
-        token_data = TokenData(username=username)
+        token_data = schemas.TokenData(username=username)
     except JWTError:
         raise credentials_exception
-    user = get_user(fake_users_db, username=token_data.username)
+    user = crud.get_user(db, username=token_data.username)
     if user is None:
         raise credentials_exception
     return user
 
 
-@app.post("/token", response_model=Token)
+@app.post("/token", response_model=schemas.Token)
 async def login_for_access_token(
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    db: Annotated[Session, Depends(get_db)]
 ):
-    user = authenticate_user(fake_users_db, form_data.username, form_data.password)
+    user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -119,17 +102,28 @@ async def redirect_to_docs():
     return RedirectResponse(url="/docs")
 
 @app.get("/files", response_model=list[schemas.File])
-def get_files(current_user: Annotated[User, Depends(get_current_user)], db: Session = Depends(get_db)):
+def get_files(
+    current_user: Annotated[schemas.User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)]
+):
     files = crud.get_files(db)
     return files
 
 @app.get("/files/{file_id}/annotations/", response_model=list[schemas.Annotation])
-def get_file_annotations(current_user: Annotated[User, Depends(get_current_user)], file_id: int, db: Session = Depends(get_db)):
+def get_file_annotations(
+    current_user: Annotated[schemas.User, Depends(get_current_user)],
+    file_id: int,
+    db: Annotated[Session, Depends(get_db)]
+):
     annotations = crud.get_annotations(db, file_id=file_id)
     return annotations
 
 @app.get("/files/{file_id}/data", response_model=list[schemas.Annotation])
-def get_file(current_user: Annotated[User, Depends(get_current_user)], file_id: int, db: Session = Depends(get_db)):
+def get_file(
+    current_user: Annotated[schemas.User, Depends(get_current_user)],
+    file_id: int,
+    db: Annotated[Session, Depends(get_db)]
+):
     file = crud.get_file(db, file_id=file_id)
     file_path = os.path.join('data', file.path)
     if os.path.exists(file_path):
@@ -138,7 +132,11 @@ def get_file(current_user: Annotated[User, Depends(get_current_user)], file_id: 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='File not found')
 
 @app.post("/files")
-def create_upload_file(current_user: Annotated[User, Depends(get_current_user)], file: UploadFile, db: Session = Depends(get_db)):
+def create_upload_file(
+    current_user: Annotated[schemas.User, Depends(get_current_user)],
+    file: UploadFile,
+    db: Annotated[Session, Depends(get_db)]
+):
     try:
         contents = file.file.read()
         path = os.path.join('data', file.filename)
@@ -154,12 +152,20 @@ def create_upload_file(current_user: Annotated[User, Depends(get_current_user)],
     return file_orm
 
 @app.post("/annotations/", response_model=schemas.Annotation)
-def create_annotations(current_user: Annotated[User, Depends(get_current_user)], annotation: schemas.AnnotationCreate, db: Session = Depends(get_db)):
+def create_annotations(
+    current_user: Annotated[schemas.User, Depends(get_current_user)], 
+    annotation: schemas.AnnotationCreate, 
+    db: Annotated[Session, Depends(get_db)]
+):
     annotation = crud.create_annotation(db, annotation=annotation)
     return annotation
 
 @app.delete("/annotations/{annotation_id}")
-def delete_annotations(current_user: Annotated[User, Depends(get_current_user)], annotation_id: int, db: Session = Depends(get_db)):
+def delete_annotations(
+    current_user: Annotated[schemas.User, Depends(get_current_user)], 
+    annotation_id: int, 
+    db: Annotated[Session, Depends(get_db)]
+):
     annotation = crud.delete_annotation(db, annotation_id)
     if annotation:
         return annotation
@@ -169,7 +175,7 @@ def delete_annotations(current_user: Annotated[User, Depends(get_current_user)],
 connected_websockets = set()
 latest_message = None
 @app.websocket("/files/{file_id}/annotations")
-async def websocket_endpoint(websocket: WebSocket, file_id: int, db: Session = Depends(get_db)):
+async def websocket_endpoint(websocket: WebSocket, file_id: int, db: Annotated[Session, Depends(get_db)]):
     global latest_message
     await websocket.accept()
     connected_websockets.add(websocket)

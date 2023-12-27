@@ -10,14 +10,28 @@ class TokenData(BaseModel):
     username: str | None = None
 
 
-class User(BaseModel):
+class UserBase(BaseModel):
     username: str
-    email: str | None = None
     full_name: str | None = None
 
 
-class UserInDB(User):
+class UserCreate(UserBase):
     hashed_password: str
+
+
+class User(UserBase):
+    id: int
+
+    class Config:
+        orm_mode = True
+
+
+class UserAuth(UserBase):
+    id: int
+    hashed_password: str
+
+    class Config:
+        orm_mode = True
 
 
 class FileBase(BaseModel):

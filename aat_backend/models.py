@@ -4,6 +4,22 @@ from sqlalchemy.orm import relationship
 from .database import Base
 
 
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True)
+    full_name = Column(String, index=True)
+    hashed_password = Column(String, index=True)
+
+    def dict(self):
+        return {
+            'id': self.id,
+            'username': self.username,
+            'full_name': self.full_name,
+            'hashed_password': self.hashed_password,
+        }
+
+
 class File(Base):
     __tablename__ = "files"
 
