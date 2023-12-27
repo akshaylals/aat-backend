@@ -9,7 +9,7 @@ $ ./env/scripts/activate
 or
 to create conda env
 ```bash
-$ conda create --name aat_backend python=3.8
+$ conda create --name aat_backend python=3.10
 $ conda activate aat_backend
 
 ```
@@ -24,6 +24,11 @@ $ conda activate <env_name>
 
 ```bash
 $ pip install -r requirements.txt
+```
+
+## Initialize database
+```bash
+$ alembic upgrade head
 ```
 
 ## Run the backend
