@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from typing import Annotated
 
 from fastapi import FastAPI, HTTPException, Depends, status, WebSocket, WebSocketDisconnect, UploadFile
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse, Response
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -79,6 +79,10 @@ async def get_current_user(
     return user
 
 
+@app.get("/", include_in_schema=False)
+async def redirect_to_docs():
+    return RedirectResponse(url="/docs")
+
 @app.post("/token", response_model=schemas.Token)
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
@@ -97,9 +101,19 @@ async def login_for_access_token(
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
-@app.get("/", include_in_schema=False)
-async def redirect_to_docs():
-    return RedirectResponse(url="/docs")
+@app.get("/user", response_model=schemas.User)
+def get_user(current_user: Annotated[schemas.User, Depends(get_current_user)]):
+    return current_user
+
+@app.post("/user", response_model=schemas.User)
+def create_user(
+    user: schemas.UserCreate,
+    db: Annotated[Session, Depends(get_db)]
+):
+    if crud.get_user(db, user.username):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User already exists")
+    user_orm = crud.create_user(db, user)
+    return user_orm
 
 @app.get("/files", response_model=list[schemas.File])
 def get_files(

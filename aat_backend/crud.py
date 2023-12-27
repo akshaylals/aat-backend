@@ -1,11 +1,23 @@
 from sqlalchemy.orm import Session
+from passlib.hash import bcrypt
 
 from . import models, schemas
 
 
 def get_user(db: Session, username: str):
     db_user = db.query(models.User).filter(models.User.username == username).first()
-    return schemas.UserAuth(**db_user.dict())
+    if db_user:
+        return schemas.UserAuth(**db_user.dict())
+    else:
+        return False
+
+def create_user(db: Session, user: schemas.UserCreate):
+    user.hashed_password = bcrypt.hash(user.hashed_password)
+    db_user = models.User(**user.dict())
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
 
 def get_files(db: Session):
     return db.query(models.File).all()
