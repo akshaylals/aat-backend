@@ -4,10 +4,17 @@ from passlib.hash import bcrypt
 from . import models, schemas
 
 
-def get_user(db: Session, username: str):
+def get_user_auth(db: Session, username: str):
     db_user = db.query(models.User).filter(models.User.username == username).first()
     if db_user:
         return schemas.UserAuth(**db_user.dict())
+    else:
+        return False
+
+def get_user(db: Session, username: str):
+    db_user = db.query(models.User).filter(models.User.username == username).first()
+    if db_user:
+        return schemas.User(**db_user.dict())
     else:
         return False
 
@@ -19,21 +26,21 @@ def create_user(db: Session, user: schemas.UserCreate):
     db.refresh(db_user)
     return db_user
 
-def get_files(db: Session):
-    return db.query(models.File).all()
+def get_projects(db: Session, user: schemas.User):
+    return db.query(models.Project).filter(models.Project.owner_id == user.id).all()
 
-def get_file(db: Session, file_id):
-    return db.query(models.File).filter(models.File.id == file_id).first()
+def get_project(db: Session, project_id):
+    return db.query(models.Project).filter(models.Project.id == project_id).first()
 
-def create_file(db: Session, file: schemas.FileCreate):
-    db_file = models.File(**file.dict())
-    db.add(db_file)
+def create_project(db: Session, project: schemas.ProjectCreate):
+    db_project = models.Project(**project.dict())
+    db.add(db_project)
     db.commit()
-    db.refresh(db_file)
-    return db_file
+    db.refresh(db_project)
+    return db_project
 
-def get_annotations(db: Session, file_id):
-    return db.query(models.Annotation).filter(models.Annotation.file_id == file_id).all()
+def get_annotations(db: Session, project_id):
+    return db.query(models.Annotation).filter(models.Annotation.project_id == project_id).all()
 
 def create_annotation(db: Session, annotation: schemas.AnnotationCreate):
     db_annotation = models.Annotation(**annotation.dict())

@@ -11,6 +11,8 @@ class User(Base):
     full_name = Column(String, index=True)
     hashed_password = Column(String, index=True)
 
+    projects = relationship("Project", back_populates="owner")
+
     def dict(self):
         return {
             'id': self.id,
@@ -20,13 +22,16 @@ class User(Base):
         }
 
 
-class File(Base):
-    __tablename__ = "files"
+class Project(Base):
+    __tablename__ = "projects"
 
     id = Column(Integer, primary_key=True, index=True)
     path = Column(String, unique=True, index=True)
 
-    annotations = relationship("Annotation", back_populates="file")
+    owner_id = Column(Integer, ForeignKey("users.id"))
+    owner = relationship("User", back_populates="projects")
+
+    annotations = relationship("Annotation", back_populates="project")
 
 
 class Annotation(Base):
@@ -35,9 +40,9 @@ class Annotation(Base):
     id = Column(Integer, primary_key=True, index=True)
     note = Column(String, index=True)
     coordinates = Column(JSON)
-    file_id = Column(Integer, ForeignKey("files.id"))
+    project_id = Column(Integer, ForeignKey("projects.id"))
 
-    file = relationship("File", back_populates="annotations")
+    project = relationship("Project", back_populates="annotations")
 
     def dict(self):
         return {

@@ -39,7 +39,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 def authenticate_user(db, username: str, password: str):
-    user = crud.get_user(db, username)
+    user = crud.get_user_auth(db, username)
     if not user:
         return False
     if not pwd_context.verify(password, user.hashed_password):
@@ -110,43 +110,43 @@ def create_user(
     user: schemas.UserCreate,
     db: Annotated[Session, Depends(get_db)]
 ):
-    if crud.get_user(db, user.username):
+    if crud.get_user_auth(db, user.username):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User already exists")
     user_orm = crud.create_user(db, user)
     return user_orm
 
-@app.get("/files", response_model=list[schemas.File])
-def get_files(
+@app.get("/projects", response_model=list[schemas.Project])
+def get_projects(
     current_user: Annotated[schemas.User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)]
 ):
-    files = crud.get_files(db)
-    return files
+    projects = crud.get_projects(db, current_user)
+    return projects
 
-@app.get("/files/{file_id}/annotations/", response_model=list[schemas.Annotation])
-def get_file_annotations(
+@app.get("/projects/{project_id}/annotations/", response_model=list[schemas.Annotation])
+def get_project_annotations(
     current_user: Annotated[schemas.User, Depends(get_current_user)],
-    file_id: int,
+    project_id: int,
     db: Annotated[Session, Depends(get_db)]
 ):
-    annotations = crud.get_annotations(db, file_id=file_id)
+    annotations = crud.get_annotations(db, project_id=project_id)
     return annotations
 
-@app.get("/files/{file_id}/data")
-def get_file(
+@app.get("/projects/{project_id}/data")
+def get_project(
     # current_user: Annotated[schemas.User, Depends(get_current_user)],
-    file_id: int,
+    project_id: int,
     db: Annotated[Session, Depends(get_db)]
 ):
-    file = crud.get_file(db, file_id=file_id)
-    file_path = os.path.join('data', file.path)
+    project = crud.get_project(db, project_id=project_id)
+    file_path = os.path.join('data', project.path)
     if os.path.exists(file_path):
         return FileResponse(path=file_path, media_type='application/octet-stream', status_code=status.HTTP_200_OK)
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='File not found')
 
-@app.post("/files")
-def create_upload_file(
+@app.post("/projects")
+def create_project(
     current_user: Annotated[schemas.User, Depends(get_current_user)],
     file: UploadFile,
     db: Annotated[Session, Depends(get_db)]
@@ -161,9 +161,9 @@ def create_upload_file(
     finally:
         file.file.close()
     
-    file_sch = schemas.FileCreate(path=file.filename)
-    file_orm = crud.create_file(db, file_sch)
-    return file_orm
+    project_sch = schemas.ProjectCreate(path=file.filename, owner_id=current_user.id)
+    project_orm = crud.create_project(db, project_sch)
+    return project_orm
 
 @app.post("/annotations/", response_model=schemas.Annotation)
 def create_annotations(
@@ -188,8 +188,8 @@ def delete_annotations(
 
 connected_websockets = set()
 latest_message = None
-@app.websocket("/files/{file_id}/annotations")
-async def websocket_endpoint(websocket: WebSocket, file_id: int, db: Annotated[Session, Depends(get_db)]):
+@app.websocket("/projects/{project_id}/annotations")
+async def websocket_endpoint(websocket: WebSocket, project_id: int, db: Annotated[Session, Depends(get_db)]):
     global latest_message
     await websocket.accept()
     connected_websockets.add(websocket)
@@ -202,7 +202,7 @@ async def websocket_endpoint(websocket: WebSocket, file_id: int, db: Annotated[S
         while True:
             message = await websocket.receive_text()
             print(message)
-            annotations_orm = crud.get_annotations(db, file_id=file_id)
+            annotations_orm = crud.get_annotations(db, project_id=project_id)
             annotations = [annotation.dict() for annotation in annotations_orm]
             latest_message = annotations
             for ws in connected_websockets:

@@ -34,25 +34,26 @@ class UserAuth(UserBase):
         orm_mode = True
 
 
-class FileBase(BaseModel):
+class ProjectBase(BaseModel):
     path: str
 
 
-class File(FileBase):
+class Project(ProjectBase):
     id: int
+    owner: User
 
     class Config:
         orm_mode = True
 
 
-class FileCreate(FileBase):
-    pass
+class ProjectCreate(ProjectBase):
+    owner_id: int
 
 
 class AnnotationBase(BaseModel):
     note: str
     coordinates: dict
-    file_id: int
+    project_id: int
 
 
 class AnnotationCreate(AnnotationBase):
