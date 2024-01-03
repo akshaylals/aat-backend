@@ -132,9 +132,9 @@ def get_file_annotations(
     annotations = crud.get_annotations(db, file_id=file_id)
     return annotations
 
-@app.get("/files/{file_id}/data", response_model=list[schemas.Annotation])
+@app.get("/files/{file_id}/data")
 def get_file(
-    current_user: Annotated[schemas.User, Depends(get_current_user)],
+    # current_user: Annotated[schemas.User, Depends(get_current_user)],
     file_id: int,
     db: Annotated[Session, Depends(get_db)]
 ):
