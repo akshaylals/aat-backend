@@ -36,6 +36,8 @@ class UserAuth(UserBase):
 
 class ProjectBase(BaseModel):
     path: str
+    name: str
+    uuid: str
 
 
 class Project(ProjectBase):

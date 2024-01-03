@@ -1,4 +1,5 @@
 import os
+import uuid
 from datetime import datetime, timedelta
 from typing import Annotated
 
@@ -151,9 +152,11 @@ def create_project(
     file: UploadFile,
     db: Annotated[Session, Depends(get_db)]
 ):
+    uid = str(uuid.uuid4())
     try:
         contents = file.file.read()
-        path = os.path.join('data', file.filename)
+        filename = f'{uid}{os.path.splitext(file.filename)[1]}'
+        path = os.path.join('data', filename)
         with open(path, 'wb') as f:
             f.write(contents)
     except Exception:
@@ -161,7 +164,7 @@ def create_project(
     finally:
         file.file.close()
     
-    project_sch = schemas.ProjectCreate(path=file.filename, owner_id=current_user.id)
+    project_sch = schemas.ProjectCreate(path=filename, owner_id=current_user.id, name=file.filename, uuid=uid)
     project_orm = crud.create_project(db, project_sch)
     return project_orm
 
