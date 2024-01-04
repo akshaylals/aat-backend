@@ -8,4 +8,4 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - UVICORN_CMD=uvicorn aat_backend.main:app --host 0.0.0.0 --port 8000 --ssl-keyfile key.pem --ssl-certfile cert.pem --workers 4 --reload
+      - UVICORN_CMD=uvicorn aat_backend.main:app --host 0.0.0.0 --port 8000 --workers 4 --reload
