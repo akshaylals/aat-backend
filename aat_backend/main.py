@@ -124,6 +124,18 @@ def get_projects(
     projects = crud.get_projects(db, current_user)
     return projects
 
+@app.get("/projects/{project_uuid}", response_model=schemas.Project)
+def get_projects(
+    current_user: Annotated[schemas.User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    project_uuid: str
+):
+    project = crud.get_project(db, project_uuid=project_uuid)
+    if project:
+        return project
+    else:
+        HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+
 @app.get("/projects/{project_id}/annotations/", response_model=list[schemas.Annotation])
 def get_project_annotations(
     current_user: Annotated[schemas.User, Depends(get_current_user)],
