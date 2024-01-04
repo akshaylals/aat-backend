@@ -130,7 +130,7 @@ def get_projects(
     db: Annotated[Session, Depends(get_db)],
     project_uuid: str
 ):
-    project = crud.get_project(db, project_uuid=project_uuid)
+    project = crud.get_project_from_uuid(db, project_uuid=project_uuid)
     if project:
         return project
     else:

@@ -29,8 +29,11 @@ def create_user(db: Session, user: schemas.UserCreate):
 def get_projects(db: Session, user: schemas.User):
     return db.query(models.Project).filter(models.Project.owner_id == user.id).all()
 
-def get_project(db: Session, project_uuid):
+def get_project_from_uuid(db: Session, project_uuid):
     return db.query(models.Project).filter(models.Project.uuid == project_uuid).first()
+
+def get_project(db: Session, project_id):
+    return db.query(models.Project).filter(models.Project.id == project_id).first()
 
 def create_project(db: Session, project: schemas.ProjectCreate):
     db_project = models.Project(**project.dict())
