@@ -12,7 +12,8 @@ class TokenData(BaseModel):
 
 class UserBase(BaseModel):
     username: str
-    full_name: str | None = None
+    firstname: str | None = None
+    lastname: str | None = None
 
 
 class UserCreate(UserBase):
@@ -34,15 +35,51 @@ class UserAuth(UserBase):
         orm_mode = True
 
 
-class ProjectBase(BaseModel):
+class FileBase(BaseModel):
     path: str
+    filename: str
+
+
+class FileCreate(FileBase):
+    project_id: str
+
+
+class File(FileBase):
+    id: int
+    
+    class Config:
+        orm_mode = True
+
+
+class AnnotationBase(BaseModel):
+    note: str
+    coordinates: dict
+    color: str
+
+
+class AnnotationCreate(AnnotationBase):
+    project_id: str
+    owner_id: int
+
+
+class Annotation(AnnotationBase):
+    id: int
+    owner: User
+    
+    class Config:
+        orm_mode = True
+
+
+class ProjectBase(BaseModel):
     name: str
-    uuid: str
 
 
 class Project(ProjectBase):
-    id: int
+    id: str
     owner: User
+    files: File
+    annotations: list[Annotation] = []
+    shared_users: list[User] = []
 
     class Config:
         orm_mode = True
@@ -50,20 +87,3 @@ class Project(ProjectBase):
 
 class ProjectCreate(ProjectBase):
     owner_id: int
-
-
-class AnnotationBase(BaseModel):
-    note: str
-    coordinates: dict
-    project_id: int
-
-
-class AnnotationCreate(AnnotationBase):
-    pass
-
-
-class Annotation(AnnotationBase):
-    id: int
-    
-    class Config:
-        orm_mode = True
