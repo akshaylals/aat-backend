@@ -58,8 +58,8 @@ class AnnotationBase(BaseModel):
 
 
 class AnnotationCreate(AnnotationBase):
-    project_id: str
-    owner_id: int
+    # project_id: str
+    pass
 
 
 class Annotation(AnnotationBase):
@@ -77,8 +77,8 @@ class ProjectBase(BaseModel):
 class Project(ProjectBase):
     id: str
     owner: User
-    files: File
-    annotations: list[Annotation] = []
+    files: list[File] = []
+    # annotations: list[Annotation] = []
     shared_users: list[User] = []
 
     class Config:
@@ -86,4 +86,4 @@ class Project(ProjectBase):
 
 
 class ProjectCreate(ProjectBase):
-    owner_id: int
+    pass

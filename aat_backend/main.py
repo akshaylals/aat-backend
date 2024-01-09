@@ -124,75 +124,76 @@ def get_projects(
     projects = crud.get_projects(db, current_user)
     return projects
 
-@app.get("/projects/{project_id}/annotations/", response_model=list[schemas.Annotation])
-def get_project_annotations(
-    current_user: Annotated[schemas.User, Depends(get_current_user)],
-    project_id: int,
-    db: Annotated[Session, Depends(get_db)]
-):
-    annotations = crud.get_annotations(db, project_id=project_id)
-    return annotations
-
-@app.get("/projects/{project_id}/data")
-def get_project(
-    # current_user: Annotated[schemas.User, Depends(get_current_user)],
-    project_id: int,
-    db: Annotated[Session, Depends(get_db)]
-):
-    project = crud.get_project(db, project_id=project_id)
-    file_path = os.path.join('data', project.path)
-    if os.path.exists(file_path):
-        return FileResponse(path=file_path, media_type='application/octet-stream', status_code=status.HTTP_200_OK)
-    else:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='File not found')
-
 @app.post("/projects")
 def create_project(
     current_user: Annotated[schemas.User, Depends(get_current_user)],
+    project: schemas.ProjectCreate,
+    db: Annotated[Session, Depends(get_db)]
+):
+    project = crud.create_project(db, project=project, user=current_user)
+    return project
+
+@app.post("/projects/{project_id}/files")
+def create_project_files(
+    current_user: Annotated[schemas.User, Depends(get_current_user)],
+    project_id: str,
     file: UploadFile,
     db: Annotated[Session, Depends(get_db)]
 ):
     uid = str(uuid.uuid4())
     try:
         contents = file.file.read()
-        filename = f'{uid}{os.path.splitext(file.filename)[1]}'
-        path = os.path.join('data', filename)
-        with open(path, 'wb') as f:
+        path = f'{uid}{os.path.splitext(file.filename)[1]}'
+        with open(os.path.join('data', path), 'wb') as f:
             f.write(contents)
     except Exception:
         return {"message": "There was an error uploading the file"}
     finally:
         file.file.close()
     
-    project_sch = schemas.ProjectCreate(path=filename, owner_id=current_user.id, name=file.filename, uuid=uid)
-    project_orm = crud.create_project(db, project_sch)
-    return project_orm
+    file_sch = schemas.FileCreate(path=path, filename=file.filename, project_id=project_id)
+    file_orm = crud.create_file(db, file_sch)
+    return file_orm
 
-@app.post("/annotations/", response_model=schemas.Annotation)
-def create_annotations(
+@app.post("/projects/{project_id}/annotations/", response_model=schemas.Annotation)
+def create_project_annotations(
     current_user: Annotated[schemas.User, Depends(get_current_user)], 
+    project_id: str,
     annotation: schemas.AnnotationCreate, 
     db: Annotated[Session, Depends(get_db)]
 ):
-    annotation = crud.create_annotation(db, annotation=annotation)
+    annotation = crud.create_annotation(db, annotation=annotation, user=current_user, project_id=project_id)
     return annotation
 
-@app.delete("/annotations/{annotation_id}")
-def delete_annotations(
-    current_user: Annotated[schemas.User, Depends(get_current_user)], 
-    annotation_id: int, 
-    db: Annotated[Session, Depends(get_db)]
-):
-    annotation = crud.delete_annotation(db, annotation_id)
-    if annotation:
-        return annotation
-    else:
-        raise HTTPException(status_code=404, detail="Annotation not found")
+# @app.get("/projects/{project_id}/data")
+# def get_project(
+#     # current_user: Annotated[schemas.User, Depends(get_current_user)],
+#     project_id: int,
+#     db: Annotated[Session, Depends(get_db)]
+# ):
+#     project = crud.get_project(db, project_id=project_id)
+#     file_path = os.path.join('data', project.path)
+#     if os.path.exists(file_path):
+#         return FileResponse(path=file_path, media_type='application/octet-stream', status_code=status.HTTP_200_OK)
+#     else:
+#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='File not found')
+
+# @app.delete("/annotations/{annotation_id}")
+# def delete_annotations(
+#     current_user: Annotated[schemas.User, Depends(get_current_user)], 
+#     annotation_id: int, 
+#     db: Annotated[Session, Depends(get_db)]
+# ):
+#     annotation = crud.delete_annotation(db, annotation_id)
+#     if annotation:
+#         return annotation
+#     else:
+#         raise HTTPException(status_code=404, detail="Annotation not found")
 
 connected_websockets = set()
 latest_message = None
 @app.websocket("/projects/{project_id}/annotations")
-async def websocket_endpoint(websocket: WebSocket, project_id: int, db: Annotated[Session, Depends(get_db)]):
+async def websocket_endpoint(websocket: WebSocket, project_id: str, db: Annotated[Session, Depends(get_db)]):
     global latest_message
     await websocket.accept()
     connected_websockets.add(websocket)
