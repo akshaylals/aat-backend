@@ -65,12 +65,10 @@ def create_annotation(db: Session, annotation: schemas.AnnotationCreate, user: s
 def get_annotations(db: Session, project_id: str):
     return db.query(models.Annotation).filter(models.Annotation.project_id == project_id).all()
 
+def get_annotation(db: Session, annotation_id: str):
+    return db.query(models.Annotation).filter(models.Annotation.id == annotation_id).first()
 
-# def delete_annotation(db: Session, annotation_id: int):
-#     db_annotation = db.query(models.Annotation).filter(models.Annotation.id == annotation_id).first()
-#     if db_annotation:
-#         db.delete(db_annotation)
-#         db.commit()
-#         return db_annotation
-#     else:
-#         return None
+def delete_annotation(db: Session, annotation: models.Annotation):
+    db.delete(annotation)
+    db.commit()
+    return annotation

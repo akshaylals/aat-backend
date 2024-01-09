@@ -64,7 +64,7 @@ class AnnotationCreate(AnnotationBase):
 
 class Annotation(AnnotationBase):
     id: int
-    owner: User
+    # owner: User
     
     class Config:
         orm_mode = True

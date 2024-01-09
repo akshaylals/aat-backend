@@ -155,8 +155,16 @@ def create_project_files(
     file_orm = crud.create_file(db, file_sch)
     return file_orm
 
+@app.get("/projects/{project_id}/annotations/", response_model=list[schemas.Annotation])
+def get_annotations(
+    current_user: Annotated[schemas.User, Depends(get_current_user)], 
+    project_id: str,
+    db: Annotated[Session, Depends(get_db)]
+):
+    return crud.get_annotations(db, project_id)
+
 @app.post("/projects/{project_id}/annotations/", response_model=schemas.Annotation)
-def create_project_annotations(
+def create_annotations(
     current_user: Annotated[schemas.User, Depends(get_current_user)], 
     project_id: str,
     annotation: schemas.AnnotationCreate, 
@@ -178,17 +186,20 @@ def create_project_annotations(
 #     else:
 #         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='File not found')
 
-# @app.delete("/annotations/{annotation_id}")
-# def delete_annotations(
-#     current_user: Annotated[schemas.User, Depends(get_current_user)], 
-#     annotation_id: int, 
-#     db: Annotated[Session, Depends(get_db)]
-# ):
-#     annotation = crud.delete_annotation(db, annotation_id)
-#     if annotation:
-#         return annotation
-#     else:
-#         raise HTTPException(status_code=404, detail="Annotation not found")
+@app.delete("/annotations/{annotation_id}")
+def delete_annotations(
+    current_user: Annotated[schemas.User, Depends(get_current_user)], 
+    annotation_id: int, 
+    db: Annotated[Session, Depends(get_db)]
+):
+    annotation = crud.get_annotation(db, annotation_id)
+    if annotation:
+        if annotation.owner == current_user.id:
+            return crud.delete_annotation(db, annotation)
+        else:
+            HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    else:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Annotation not found")
 
 connected_websockets = set()
 latest_message = None
