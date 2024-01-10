@@ -1,4 +1,5 @@
 import uuid
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from passlib.hash import bcrypt
 
@@ -46,12 +47,19 @@ def create_project(db: Session, project: schemas.ProjectCreate, user: schemas.Us
     db.refresh(db_project)
     return db_project
 
+def get_file(db: Session, file_id: int):
+    return db.query(models.File).filter(models.File.id == file_id).first()
+
 def create_file(db: Session, file: schemas.FileCreate):
     db_file = models.File(**file.dict())
     db.add(db_file)
     db.commit()
     db.refresh(db_file)
     return db_file
+
+def delete_file(db: Session, file: models.File):
+    db.delete(file)
+    db.commit()
     
 def create_annotation(db: Session, annotation: schemas.AnnotationCreate, user: schemas.User, project_id: str):
     db_annotation = models.Annotation(**annotation.dict())
@@ -71,4 +79,10 @@ def get_annotation(db: Session, annotation_id: str):
 def delete_annotation(db: Session, annotation: models.Annotation):
     db.delete(annotation)
     db.commit()
-    return annotation
+
+def add_shared_user(db: Session, user: schemas.User, project_id: str):
+    try:
+        db.execute(models.project_user.insert().values(project_id=project_id, user_id=user.id))
+        db.commit()
+    except IntegrityError:
+        db.rollback()

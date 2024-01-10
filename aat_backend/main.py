@@ -124,6 +124,17 @@ def get_projects(
     projects = crud.get_projects(db, current_user)
     return projects
 
+@app.get("/projects/{project_id}", response_model=schemas.Project)
+def get_projects(
+    current_user: Annotated[schemas.User, Depends(get_current_user)],
+    project_id: str,
+    db: Annotated[Session, Depends(get_db)]
+):
+    project = crud.get_project(db, project_id)
+    if project.owner_id != current_user.id and current_user.id not in project.shared_users:
+        crud.add_shared_user(db, current_user, project_id)
+    return project
+
 @app.post("/projects")
 def create_project(
     current_user: Annotated[schemas.User, Depends(get_current_user)],
@@ -173,6 +184,43 @@ def create_annotations(
     annotation = crud.create_annotation(db, annotation=annotation, user=current_user, project_id=project_id)
     return annotation
 
+@app.get("/files/{file_id}")
+def get_file(
+    # current_user: Annotated[schemas.User, Depends(get_current_user)], 
+    file_id: str,
+    db: Annotated[Session, Depends(get_db)]
+):
+    file = crud.get_file(db, file_id)
+    if file:
+        file_path = os.path.join('data', file.path)
+        if os.path.exists(file_path):
+            return FileResponse(path=file_path, media_type='application/octet-stream', status_code=status.HTTP_200_OK)
+        else:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+    else:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+
+@app.delete("/files/{file_id}")
+def delete_file(
+    current_user: Annotated[schemas.User, Depends(get_current_user)], 
+    file_id: str,
+    db: Annotated[Session, Depends(get_db)]
+):
+    file = crud.get_file(db, file_id)
+    if file:
+        if file.project.owner_id == current_user.id:
+            file_path = os.path.join('data', file.path)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                crud.delete_file(db, file)
+                return None
+            else:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+        else:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only owner can delete the files")
+    else:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+
 # @app.get("/projects/{project_id}/data")
 # def get_project(
 #     # current_user: Annotated[schemas.User, Depends(get_current_user)],
@@ -194,10 +242,11 @@ def delete_annotations(
 ):
     annotation = crud.get_annotation(db, annotation_id)
     if annotation:
-        if annotation.owner == current_user.id:
-            return crud.delete_annotation(db, annotation)
+        if annotation.owner_id == current_user.id:
+            crud.delete_annotation(db, annotation)
+            return None
         else:
-            HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Annotation not found")
 
