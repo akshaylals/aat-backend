@@ -151,20 +151,24 @@ def create_project_files(
     file: UploadFile,
     db: Annotated[Session, Depends(get_db)]
 ):
-    uid = str(uuid.uuid4())
-    try:
-        contents = file.file.read()
-        path = f'{uid}{os.path.splitext(file.filename)[1]}'
-        with open(os.path.join('data', path), 'wb') as f:
-            f.write(contents)
-    except Exception:
-        return {"message": "There was an error uploading the file"}
-    finally:
-        file.file.close()
-    
-    file_sch = schemas.FileCreate(path=path, filename=file.filename, project_id=project_id)
-    file_orm = crud.create_file(db, file_sch)
-    return file_orm
+    project = crud.get_project(db, project_id)
+    if project:
+        uid = str(uuid.uuid4())
+        try:
+            contents = file.file.read()
+            path = f'{uid}{os.path.splitext(file.filename)[1]}'
+            with open(os.path.join('data', path), 'wb') as f:
+                f.write(contents)
+        except Exception:
+            return {"message": "There was an error uploading the file"}
+        finally:
+            file.file.close()
+        
+        file_sch = schemas.FileCreate(path=path, filename=file.filename, project_id=project_id)
+        file_orm = crud.create_file(db, file_sch)
+        return file_orm
+    else:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
 @app.get("/projects/{project_id}/annotations/", response_model=list[schemas.Annotation])
 def get_annotations(
