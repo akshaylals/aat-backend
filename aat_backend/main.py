@@ -188,6 +188,22 @@ def create_annotations(
     annotation = crud.create_annotation(db, annotation=annotation, user=current_user, project_id=project_id)
     return annotation
 
+@app.put("/annotations/{annotation_id}", response_model=schemas.Annotation)
+def create_annotations(
+    current_user: Annotated[schemas.User, Depends(get_current_user)], 
+    annotation_id: str,
+    annotation: schemas.AnnotationCreate, 
+    db: Annotated[Session, Depends(get_db)]
+):
+    ann = crud.get_annotation(db, annotation_id)
+    if ann:
+        if ann.owner_id == current_user.id:
+            return crud.update_annotation(db, annotation_id, annotation)
+        else:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    else:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Annotation not found")
+
 @app.get("/files/{file_id}")
 def get_file(
     # current_user: Annotated[schemas.User, Depends(get_current_user)], 

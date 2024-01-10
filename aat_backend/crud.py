@@ -76,6 +76,17 @@ def get_annotations(db: Session, project_id: str):
 def get_annotation(db: Session, annotation_id: str):
     return db.query(models.Annotation).filter(models.Annotation.id == annotation_id).first()
 
+def update_annotation(db: Session, annotation_id: int, annotation: schemas.AnnotationCreate):
+    existing_annotation = db.query(models.Annotation).filter(models.Annotation.id == annotation_id).first()
+
+    if existing_annotation:
+        for field, value in annotation.dict().items():
+            setattr(existing_annotation, field, value)
+
+        db.commit()
+
+    return existing_annotation
+
 def delete_annotation(db: Session, annotation: models.Annotation):
     db.delete(annotation)
     db.commit()
