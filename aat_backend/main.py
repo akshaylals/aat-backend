@@ -20,7 +20,7 @@ from .database import engine, get_db
 # openssl rand -hex 32
 SECRET_KEY="48d56adc96ef62fd6d10a01ce9da241929b554f4976eed59159fa2a091031b76"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_DAYS = 30
 
 
 models.Base.metadata.create_all(bind=engine)
@@ -96,7 +96,7 @@ async def login_for_access_token(
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token_expires = timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
     access_token = create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
