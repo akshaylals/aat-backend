@@ -35,6 +35,9 @@ def get_projects(db: Session, user: schemas.User):
     ).all()
     return projects
 
+def get_project_from_uuid(db: Session, project_uuid):
+    return db.query(models.Project).filter(models.Project.uuid == project_uuid).first()
+
 def get_project(db: Session, project_id):
     return db.query(models.Project).filter(models.Project.id == project_id).first()
 
